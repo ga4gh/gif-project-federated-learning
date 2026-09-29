@@ -26,29 +26,37 @@ git clone https://github.com/calypr/syfon.git && cd syfon
 
 ## Step 3: Configure and start (10 min)
 
-Create `local.yaml`, pointing the S3 credentials at our MinIO:
+Create `local.yaml`, pointing a bucket entry at our MinIO. This follows Syfon's current `buckets:` format; the older `s3_credentials:` key is still accepted. The same config is in [`08-round-trip/config/syfon.yaml`](../08-round-trip/config/syfon.yaml).
 
 ```yaml
 port: 8080
 auth:
   mode: local
   basic:
-    username: "drs-user"
-    password: "drs-pass"
+    username: drs-user
+    password: drs-pass
 database:
   sqlite:
-    file: "drs_local.db"
-s3_credentials:
-  - bucket: "fl-eval"
-    region: "us-east-1"
-    access_key: "minio-user"
-    secret_key: "minio-pass"
-    endpoint: "http://localhost:9000"
+    file: ./data/drs_local.db
+credential_encryption:
+  local_key_file: ./data/.syfon-credential-kek
+buckets:
+  - bucket: fl-eval
+    provider: s3
+    region: us-east-1
+    endpoint: http://localhost:9000
+    access_key: minio-user
+    secret_key: minio-pass
 ```
 
 ```bash
+mkdir -p data
 syfon serve --config local.yaml        # or, from source: go run . serve --config local.yaml
-curl -s http://localhost:8080/healthz
+# or the published multi-arch image:
+# docker run -p 8080:8080 --user "$(id -u):$(id -g)" --workdir / \
+#   -v "$PWD/local.yaml:/config.yaml:ro" -v "$PWD/data:/data" \
+#   quay.io/ohsu-comp-bio/syfon:development serve --config /config.yaml
+curl -s -u drs-user:drs-pass http://localhost:8080/healthz
 curl -s -u drs-user:drs-pass http://localhost:8080/ga4gh/drs/v1/service-info | jq .
 ```
 
@@ -71,14 +79,26 @@ curl -s "<the signed URL returned>" -o roundtrip.txt && diff part.txt roundtrip.
 In the training loop, a TES task writes `s3://fl-eval/out/weights.txt`, and *then* it needs to become a DRS object. Test registering an object that is already in storage, without re-uploading it:
 
 1. Put a file in MinIO directly (or reuse `out/weights.txt` from [03](../03-tes-funnel/)).
-2. Register it with `POST /ga4gh/drs/v1/objects/register`. Work out the request body from Syfon's API docs or OpenAPI spec. You'll need at least the name, size, checksum, and the `s3://` location.
+2. Register it with `POST /ga4gh/drs/v1/objects/register`. From Syfon's OpenAPI spec and source, the body is a list of candidates, each with a `size`, a **sha256** checksum (required by Syfon), and at least one access method. Syfon rejects `mime_type`, even though the spec lists it:
+
+```bash
+SHA=$(shasum -a 256 weights.txt | cut -d' ' -f1); SIZE=$(wc -c < weights.txt | tr -d ' ')
+cat > register.json <<EOF
+{"candidates": [{"name": "weights.txt", "size": $SIZE,
+  "checksums": [{"type": "sha256", "checksum": "$SHA"}],
+  "access_methods": [{"type": "s3", "access_url": {"url": "s3://fl-eval/out/weights.txt"}}]}]}
+EOF
+curl -s -u drs-user:drs-pass -X POST http://localhost:8080/ga4gh/drs/v1/objects/register \
+  -H 'Content-Type: application/json' -d @register.json | jq .
+```
+
 3. Resolve the returned ID through `GET /objects/{id}` and download it through its access URL.
 
 **Record:**
 
 - The exact request that worked, pasted into FINDINGS.md.
 - Who would have to make that call in our architecture: the task itself (so it needs DRS credentials inside the container) or the coordinator after the task completes.
-- Whether register is part of the DRS spec version Syfon implements, or a Syfon-specific extension. That matters for the [gap log](../../README.md#tracking-api-gaps): if write-back only works through an implementation-specific endpoint, that is the gap.
+- Whether `service-info` advertises `objectRegistrationSupported`. `POST /objects/register` is optional functionality in DRS 1.5 (alongside `POST /upload-request`), so write-back by registration is in the spec, not a Syfon extension. Syfon's source rejects `/upload-request`, so uploads have to go to storage directly or through Syfon's own API. Confirm both, because this shapes the [gap log](../../README.md#tracking-api-gaps): the spec gap is narrower than we assumed, and the implementation gap is real.
 
 ## Answer the scorecard in FINDINGS.md
 

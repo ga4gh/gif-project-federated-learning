@@ -25,17 +25,19 @@ The MinIO console is at http://localhost:9001 (user `minio-user`, password `mini
 
 ## Step 2: Install and start Funnel (10–15 min)
 
-Download the latest release for your platform from the [releases page](https://github.com/ohsu-comp-bio/funnel/releases) (`darwin` + `arm64` for Apple Silicon), unpack it, and put `funnel` on your `PATH`.
+Install the binary with Funnel's install script (it picks the right release for your OS and architecture and installs to `~/.local/bin`), or download it from the [releases page](https://github.com/calypr/funnel/releases). Run Funnel natively rather than from its container image: the image is built to drive containerd on Kubernetes, while the native binary's local worker uses your Docker.
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/calypr/funnel/main/install.sh -o funnel-install.sh
+less funnel-install.sh && bash funnel-install.sh
 funnel version
 funnel server run
 ```
 
-By default the server serves HTTP on port 8000 and uses a local worker with the Docker executor. Confirm the address in the startup log, then check `service-info`:
+By default the server serves HTTP on port 8000 (RPC on 9090) and uses a local worker with the Docker executor. Check `service-info`:
 
 ```bash
-curl -s http://localhost:8000/service-info | jq .
+curl -s http://localhost:8000/ga4gh/tes/v1/service-info | jq .
 ```
 
 **Record:** release version and date; whether an arm64 binary existed; whether a Docker image exists and for which architectures.
@@ -60,7 +62,18 @@ Wait for state `COMPLETE` and find the stdout in the task logs.
 
 ## Step 4: S3 input and output via MinIO (15–20 min)
 
-This is how a training task will read a partition and write weights. Configure Funnel's S3-compatible storage to point at MinIO. Funnel supports S3, GCS, Swift, HTTP(S), and FTP. Take the exact config keys from Funnel's storage docs for your version (the S3-compatible "generic S3" backend needs the endpoint `localhost:9000` and the MinIO key and secret). Then restart with `funnel server run --config funnel.yaml`.
+This is how a training task will read a partition and write weights. Point Funnel's generic S3 backend at MinIO, and turn off the AWS backend so `s3://` URLs don't go to AWS. Save this as `funnel.yaml` (the same settings are in [`08-round-trip/config/funnel.yaml`](../08-round-trip/config/funnel.yaml)), then restart with `funnel server run --config funnel.yaml`:
+
+```yaml
+AmazonS3:
+  Disabled: true
+GenericS3:
+  - Disabled: false
+    Endpoint: "http://localhost:9000"
+    Key: "minio-user"
+    Secret: "minio-pass"
+    Region: "us-east-1"
+```
 
 ```bash
 echo "partition data" > part.txt
@@ -91,7 +104,7 @@ Once a DRS server is running ([04](../04-drs-syfon/) or [05](../05-drs-starter-k
 "inputs": [{ "url": "drs://localhost:8080/<object-id>", "path": "/in/part.txt" }]
 ```
 
-**Record exactly what happens.** If Funnel doesn't resolve `drs://`, note what the caller has to do instead: resolve the DRS object to an access URL first and pass that. Either way this is a data point for the [API gap log](../../README.md#tracking-api-gaps). TES doesn't define how a task's inputs relate to DRS.
+Funnel's source has storage backends for local files, S3 (AWS and generic), GCS, Swift, HTTP(S), and FTP, but not DRS, so expect this to fail. **Record exactly what happens.** If Funnel doesn't resolve `drs://`, note what the caller has to do instead: resolve the DRS object to an access URL first and pass that. Either way this is a data point for the [API gap log](../../README.md#tracking-api-gaps). TES doesn't define how a task's inputs relate to DRS.
 
 ## Answer the scorecard in FINDINGS.md
 

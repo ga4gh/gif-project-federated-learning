@@ -1,0 +1,52 @@
+# Node-in-a-box, round-trip edition: object storage + DRS in containers.
+# Funnel (TES) runs natively on the host because its local worker drives Docker
+# directly; see README.md. Start with:  docker compose up -d
+name: fl-node
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio-user
+      MINIO_ROOT_PASSWORD: minio-pass
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "mc alias set local http://minio:9000 minio-user minio-pass &&
+             mc mb -p local/fl-eval && echo bucket fl-eval ready"
+    restart: "no"
+
+  syfon:
+    # Multi-arch (amd64 + arm64) image published by CALYPR. If it won't pull,
+    # comment out `image:` and uncomment `build:` to build from source.
+    image: quay.io/ohsu-comp-bio/syfon:development
+    # build: https://github.com/calypr/syfon.git
+    command: ["serve", "--config", "/config/syfon.yaml"]
+    working_dir: /
+    user: "0:0"   # lets Syfon write its SQLite DB and key into the named volume
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config/syfon.yaml:/config/syfon.yaml:ro
+      - syfon-data:/data
+
+volumes:
+  minio-data:
+  syfon-data:

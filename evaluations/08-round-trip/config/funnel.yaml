@@ -1,0 +1,31 @@
+# Funnel (TES) config for the round-trip test. Run from this folder:
+#   funnel server run --config config/funnel.yaml
+# Defaults: https://github.com/calypr/funnel/blob/main/config/default-config.yaml
+Server:
+  HostName: localhost
+  HTTPPort: "8000"
+  RPCPort: "9090"
+
+Compute: local
+Database: boltdb
+BoltDB:
+  Path: ./funnel-work-dir/funnel.db
+
+Worker:
+  WorkDir: ./funnel-work-dir
+  LeaveWorkDir: false
+
+# Turn off the AWS backend so s3:// URLs go to MinIO via GenericS3.
+AmazonS3:
+  Disabled: true
+
+GenericS3:
+  - Disabled: false
+    Endpoint: "http://localhost:9000"
+    Key: "minio-user"
+    Secret: "minio-pass"
+    Region: "us-east-1"
+
+HTTPStorage:
+  Timeout:
+    duration: 120s

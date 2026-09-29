@@ -1,0 +1,30 @@
+# Syfon (DRS) local-mode config for the round-trip test.
+# Reference: https://github.com/calypr/syfon/blob/development/docs/configuration.md
+port: 8080
+
+auth:
+  mode: local
+  basic:
+    username: drs-user
+    password: drs-pass
+
+database:
+  sqlite:
+    file: ./data/drs_local.db
+
+credential_encryption:
+  local_key_file: ./data/.syfon-credential-kek
+
+buckets:
+  - bucket: fl-eval
+    provider: s3
+    region: us-east-1
+    # Signed URLs are built against this endpoint, so it must be reachable from
+    # wherever the URLs are fetched: the Funnel worker and the test script, both
+    # on the host. Signing doesn't contact MinIO. See README "Troubleshooting".
+    endpoint: http://localhost:9000
+    access_key: minio-user
+    secret_key: minio-pass
+
+signing:
+  default_expiry_seconds: 3600
