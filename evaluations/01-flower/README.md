@@ -1,22 +1,38 @@
 # 01: Flower hello world
 
-**Time:** about 75 minutes
-**Goal:** run a federated training job in Flower twice, first as a simulation and then as real separate processes, and come away knowing what a site has to run.
+**Time:** about 90 minutes, including reading
+**Goal:** understand Flower's architecture, then run a federated training job twice, first as a simulation and then as real separate processes, and come away knowing what a site has to run.
 **Tested against:** Flower 1.39 (September 2026). Flower's CLI changes between minor versions; if a command below fails, the linked docs for your version are authoritative.
 
-## Federated learning in five minutes
+New to federated learning? Read the [FL primer](../FL-PRIMER.md) first (about 15 minutes). The rest of this page assumes its vocabulary: rounds, clients, FedAvg, strategies, non-IID.
 
-If you've already done FL, skip this section.
+## Flower in one page
 
-- A **model** is a set of numeric **weights**. Training means repeatedly nudging those weights to reduce error on training data.
-- In **federated learning**, each site (a **client**) trains the same model on its own data. Only the weights leave the site, never the data.
-- A **round** works like this. The **server** sends the current **global weights** to clients. Each client trains locally for a few passes over its data (**local epochs**) and sends back updated weights. The server combines them into new global weights.
-- **FedAvg** is the standard way to combine them: a weighted average of the clients' weights, weighted by how many training examples each client has. It's a few lines of NumPy.
-- A **strategy** is the server-side policy: which clients to pick each round, how to aggregate, and when to evaluate. FedAvg is the default strategy.
-- **Non-IID** data means sites' data come from different distributions (in our case, different ancestry backgrounds). It's the realistic case, and it makes FL harder.
-- **Differential privacy** (DP-SGD, via Opacus) adds calibrated noise during local training so the returned weights leak less about individual records. Not needed for this exercise.
+[Flower](https://flower.ai) (package `flwr`) is an open-source FL framework from Flower Labs, first described in Beutel et al., 2020 (arXiv:2007.14390), and licensed Apache 2.0. Its design goal is to be **framework-agnostic and light**: your training code stays plain PyTorch, TensorFlow, JAX, scikit-learn, XGBoost, or Hugging Face, and Flower handles the round loop, the messaging, and the deployment plumbing. It targets both research (simulation) and production cross-silo deployments.
 
-Flower's vocabulary:
+**Your code: two apps.** A Flower project is a Python package with two entry points:
+
+- **ServerApp**: server-side logic. Usually you pick a **strategy** (FedAvg, FedProx, FedAdam/FedYogi, FedAvgM, and others) and say how many rounds to run. The strategy decides which clients to sample, what to send them, and how to aggregate what comes back.
+- **ClientApp**: site-side logic. It receives the global weights plus config (learning rate, local epochs), loads the site's data, trains, and returns updated weights, the number of examples, and metrics. Evaluation works the same way.
+
+Recent Flower versions pass these as **Messages** carrying typed records (arrays for weights, metrics, config). Project settings (rounds, local epochs, federation addresses) live in `pyproject.toml`. `flwr run` builds the project into an app bundle and submits it.
+
+**Infrastructure: two long-running services.**
+
+| Component | Runs where | Role |
+|---|---|---|
+| **SuperLink** | Coordinator | Accepts runs from `flwr run` (the Control API), runs the ServerApp, and hosts the **Fleet API** (default port 9092) that sites connect to |
+| **SuperNode** | Each site | Connects *outbound* to the SuperLink's Fleet API, pulls work for its site, runs the ClientApp, and returns results. Started with site-specific `--node-config` (e.g., which data partition or path to use) |
+
+The ServerApp and ClientApp run as subprocesses of the SuperLink and SuperNode, or in separate processes or containers for isolation. Flower publishes Docker images (`flwr/superlink`, `flwr/supernode`, and others) and Helm charts. TLS and SuperNode authentication are available for real deployments; the `--insecure` flag used in this exercise turns them off.
+
+**Simulation vs. deployment.** The same ServerApp and ClientApp run unchanged in both. **Simulation** fakes many SuperNodes inside one machine (using Ray) with data split by **Flower Datasets** partitioners, including Dirichlet partitioning to create non-IID splits. **Deployment** uses real SuperLink and SuperNode processes on real machines.
+
+**Privacy and security features.** Client-side "mods" wrap the ClientApp: secure aggregation (SecAgg+) and differential-privacy wrappers for central or local DP (clipping plus noise). You can also use Opacus inside your own training loop, which is what our proposal plans.
+
+**What this means for us.** Flower's unit of deployment at a site is the **SuperNode, a long-running service** that dials out to the coordinator and runs every round over Flower's own channel. That matches [Pattern B](../PATTERNS.md) (TES launches a SuperNode for a training session; DRS supplies its data). For [Pattern A](../PATTERNS.md) (a TES task per round) we would use only Flower's aggregation logic, or plain FedAvg, and write the round loop ourselves. Step 6 below lets you see the SuperNode's behavior directly.
+
+### Flower vocabulary
 
 | Term | What it is |
 |---|---|
@@ -24,7 +40,7 @@ Flower's vocabulary:
 | **ClientApp** | Your client-side code: load local data, train, return weights |
 | **SuperLink** | The long-running server process that ServerApps run on |
 | **SuperNode** | The long-running process at each site that ClientApps run on. It connects *outbound* to the SuperLink |
-| **Simulation** | Everything in one process on your laptop, with virtual clients |
+| **Simulation** | Everything on one machine, with virtual clients |
 | **Deployment** | A real SuperLink plus real SuperNodes, as separate processes or machines |
 
 ## Step 1: Set up (10 min)

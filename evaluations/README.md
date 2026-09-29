@@ -2,6 +2,8 @@
 
 Hands-on pre-work for the [October 2 hackathon](../HACKATHON.md), done in the open so anyone can follow along, repeat a step on their own machine, or add findings.
 
+New to federated learning? Start with the [FL primer](FL-PRIMER.md): core mechanics, genomics and EHR use cases, and privacy approaches, in about 15 minutes of reading.
+
 There are two kinds of evaluation here:
 
 1. **FL framework basics** (`01`, `02`). A hello world in Flower and in NVIDIA FLARE, run to understand how federated learning frameworks are structured and what they expect from a site. These feed decision D1 (framework) and the integration question in [PATTERNS.md](PATTERNS.md).
