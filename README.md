@@ -153,6 +153,7 @@ The 12-month roadmap from the proposal. The [near-term plan](#near-term-plan-nex
 ## Getting involved
 
 - **Hackathon:** see [HACKATHON.md](HACKATHON.md) for the October 2 plan, tracks, and the site readiness survey.
+- **Evaluations:** hands-on pre-work on FL frameworks (Flower, NVIDIA FLARE) and candidate GA4GH implementations (TES, DRS) lives in [`evaluations/`](evaluations/). Pick one, follow its README, and add your results to its `FINDINGS.md`.
 - **Pick up work:** issues are grouped by workstream (`ws:science`, `ws:node`, `ws:coordinator`, `ws:auth`, `ws:sites`). Issues labeled `good-first-issue` are sized to finish in an afternoon. Comment on an issue before starting so two people don't collide.
 - **Driver Projects:** joining as a site means bringing up the node-in-a-box on a VM that the coordinator can reach, registering your synthetic partition, and being available for a coordinated training run. We'll publish a one-page "what we need from you" with the M4 runbook.
 - **Sync:** a 30-minute call every two weeks, opening with a demo of whatever runs. Day-to-day discussion happens in GitHub issues.
