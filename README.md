@@ -4,9 +4,9 @@ A GA4GH Implementation Forum (GIF) project hosting configs, tutorials, scripts, 
 
 **Project coordinator:** Brian O'Connor (Nimbus Informatics, GIF co-lead)
 
-**Next event:** [Hackathon, Friday October 2, 2026](HACKATHON.md) (3 hours, hybrid)
+**Status:** Experiment 1 is working toward M1 (November 20, 2026), with M4 targeted for GA4GH Connect in April 2027. Work is tracked in [issues](https://github.com/ga4gh/gif-project-federated-learning/issues) and [milestones](https://github.com/ga4gh/gif-project-federated-learning/milestones).
 
-Contents: [Background](#background) · [Experiment 1 plan](#experiment-1-plan) · [Architecture](#architecture) · [Near-term plan](#near-term-plan-next-10-weeks) · [Workstreams](#workstreams-champions-needed) · [Tracking API gaps](#tracking-api-gaps) · [Decisions](#decisions) · [Longer-term plan](#longer-term-plan-12-months) · [Getting involved](#getting-involved)
+Contents: [Background](#background) · [Experiment 1 plan](#experiment-1-plan) · [Architecture](#architecture) · [Near-term plan](#near-term-plan-through-april-2027) · [Workstreams](#workstreams-champions-needed) · [Tracking API gaps](#tracking-api-gaps) · [Decisions](#decisions) · [Longer-term plan](#longer-term-plan-12-months) · [Getting involved](#getting-involved)
 
 ## Background
 
@@ -89,23 +89,22 @@ One training round:
 
 The amber tags in the diagram mark places where we expect the APIs to fall short. Confirm or rule them out as we build, and log each one as an [API gap](#tracking-api-gaps).
 
-### Near-term plan (next 10 weeks)
+### Near-term plan (through April 2027)
 
 The first goal is a thin, working, end-to-end slice: two or three real nodes running a full federated training loop over GA4GH APIs, with a result showing federation beats local-only training. Each milestone produces something we can demo.
 
 | Milestone | Target date | Done means |
 |---|---|---|
-| **M0: Decisions and champions** | Oct 9 | Hackathon held. Framework, dispatch API, DRS implementation, and auth approach recorded in [`decisions/`](decisions/). A champion named for each workstream. |
-| **M1: Science works in simulation** | Oct 30 | Synthetic partitions with the planted signal. On one machine, federated training beats local-only. Training step packaged as a container. |
-| **M2: One node in a box** | Nov 20 | `docker compose up` gives a working DRS + WES/TES node. The coordinator runs one full round against it: weights pulled via DRS, trained, written back, fetched. |
-| **M3: Multi-site** | Dec 11 | Two or three real nodes (e.g., Nimbus, Verily, one Driver Project) run 10+ rounds over the internet with static bearer tokens. Result reproduced. |
-| **M4: Driver onboarding + blog** | Jan 2027 | Onboarding runbook, first external Driver Project joins without hand-holding, blog post published. |
+| **M1: Decisions + science works in simulation** | Nov 20, 2026 | D1–D5 decided and recorded in [`decisions/`](decisions/), informed by the round-trip test against the DRS candidates. Champions named for each workstream. Synthetic partitions with the planted signal. On one machine, federated training beats local-only. Training step packaged as a container. |
+| **M2: One node in a box** | Jan 15, 2027 | `docker compose up` gives a working DRS + WES/TES node. The coordinator runs one full round against it: weights pulled via DRS, trained, written back, fetched. |
+| **M3: Multi-site** | Mar 5, 2027 | Two or three real nodes (e.g., Nimbus, Verily, one Driver Project) run 10+ rounds over the internet with static bearer tokens. Result reproduced. |
+| **M4: Driver onboarding + blog** | GA4GH Connect, April 2027 | Onboarding runbook, first external Driver Project joins without hand-holding, blog post published. Results presented at Connect. |
 
 **Deliberately deferred until after M3:** Passports and machine-to-machine token delegation, HPC support (SLURM/PBS, Apptainer), GPU passthrough, the DP epsilon sweep, HuggingFace Hub and Dockstore integration, and the telemetry study. These are all still in scope for the [12-month plan](#longer-term-plan-12-months); they just don't block the first demo.
 
 ### Workstreams (champions needed)
 
-Five workstreams. Each needs one **champion** who owns its scope through M3: keeps its issues moving, makes calls within the workstream, and reports progress at the biweekly sync. Champions don't have to do all the work. They make sure it gets done. If you're willing to champion one, say so at the hackathon or comment on its epic issue.
+Five workstreams. Each needs one **champion** who owns its scope through M3: keeps its issues moving, makes calls within the workstream, and reports progress at the biweekly sync. Champions don't have to do all the work. They make sure it gets done. If you're willing to champion one, comment on its epic issue or raise it at the biweekly sync.
 
 | Workstream | Scope | First deliverables | Champion |
 |---|---|---|---|
@@ -137,7 +136,7 @@ The API gap report is the main outcome of this project, so we capture gaps as we
 
 ### Decisions
 
-Architecture and stack decisions are recorded as short notes in [`decisions/`](decisions/), one file per decision, so people who join later can see what was chosen and why. The open decisions for the hackathon are listed in [`decisions/README.md`](decisions/README.md).
+Architecture and stack decisions are recorded as short notes in [`decisions/`](decisions/), one file per decision, so people who join later can see what was chosen and why. The open decisions are listed in [`decisions/README.md`](decisions/README.md). The October 2 hackathon focused on getting the Reference Cloud running, so D1–D5 are still open and are tracked as part of M1.
 
 ### Longer-term plan (12 months)
 
@@ -152,7 +151,7 @@ The 12-month roadmap from the proposal. The [near-term plan](#near-term-plan-nex
 
 ## Getting involved
 
-- **Hackathon:** see [HACKATHON.md](HACKATHON.md) for the October 2 plan, tracks, and the site readiness survey.
+- **Site readiness survey:** Driver Projects interested in hosting a node, please fill in the [survey in HACKATHON.md](HACKATHON.md#site-readiness-survey). That file also has the original October 2 hackathon plan.
 - **Evaluations:** hands-on pre-work on FL frameworks (Flower, NVIDIA FLARE) and candidate GA4GH implementations (TES, DRS) lives in [`evaluations/`](evaluations/). Pick one, follow its README, and add your results to its `FINDINGS.md`.
 - **Pick up work:** issues are grouped by workstream (`ws:science`, `ws:node`, `ws:coordinator`, `ws:auth`, `ws:sites`). Issues labeled `good-first-issue` are sized to finish in an afternoon. Comment on an issue before starting so two people don't collide.
 - **Driver Projects:** joining as a site means bringing up the node-in-a-box on a VM that the coordinator can reach, registering your synthetic partition, and being available for a coordinated training run. We'll publish a one-page "what we need from you" with the M4 runbook.
@@ -160,7 +159,7 @@ The 12-month roadmap from the proposal. The [near-term plan](#near-term-plan-nex
 
 ## Implementation evaluation notes
 
-Early notes on candidate implementations, feeding the hackathon decisions.
+Early notes on candidate implementations, feeding decisions D1–D4.
 
 ### Software we need
 
